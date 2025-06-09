@@ -1,4 +1,3 @@
-import skagent.algos.maliar as solver
 import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -98,53 +97,6 @@ class BlockPolicyNet(Net):
         return df
 
 
-################
-# Model bindings
-
-
-def get_estimated_discounted_lifetime_reward_loss(
-    state_variables, block, discount_factor, big_t, parameters
-):
-    # TODO: Should be able to get 'state variables' from block
-    # Maybe with ZP's analysis modules
-
-    # convoluted
-    # TODO: codify this encoding and decoding of the grid into a separate object
-    shock_vars = block.get_shocks()
-    big_t_shock_syms = sum(
-        [[f"{sym}_{t}" for sym in list(shock_vars.keys())] for t in range(big_t)], []
-    )
-
-    # will work for big_t = 1 only.
-    given_syms = state_variables + big_t_shock_syms
-
-    def estimated_discounted_lifetime_reward_loss(df, input_vector):
-        ## includes the values of state_0 variables, and shocks.
-        given_vals = dict(zip(given_syms, input_vector))
-
-        shock_vals = {sym: given_vals[sym] for sym in big_t_shock_syms}
-        shocks_by_t = {
-            sym: torch.stack([shock_vals[f"{sym}_{t}"] for t in range(big_t)])
-            for sym in shock_vars
-        }
-
-        ####block, discount_factor, dr, states_0, big_t, parameters={}, agent=None
-        edlr = solver.estimate_discounted_lifetime_reward(
-            block,
-            discount_factor,
-            df,
-            {sym: given_vals[sym] for sym in state_variables},
-            big_t,
-            parameters=parameters,
-            agent=None,  ## TODO: Pass through the agent?
-            shocks_by_t=shocks_by_t,
-            ## Handle multiple decision rules?
-        )
-        return -edlr
-
-    return estimated_discounted_lifetime_reward_loss
-
-
 ###########
 # Training Nets
 
@@ -169,7 +121,7 @@ def aggregate_net_loss(inputs, df, loss_function):
 def train_block_policy_nn(block_policy_nn, inputs, loss_function, epochs=50):
     ## to change
     # criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(block_policy_nn.parameters(), lr=0.01)  # Using Adam
+    optimizer = torch.optim.Adam(block_policy_nn.parameters(), lr=0.001)  # Using Adam
 
     for epoch in range(epochs):
         running_loss = 0.0

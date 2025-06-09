@@ -1,4 +1,5 @@
 from conftest import case_0, case_1, case_2, case_3
+import skagent.algos.maliar as maliar
 import skagent.ann as ann
 import skagent.grid as grid
 import skagent.models.perfect_foresight as pfm
@@ -19,7 +20,7 @@ class test_ann_lr(unittest.TestCase):
         pass
 
     def test_case_0(self):
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             ["a"],
             case_0["block"],
             0.9,
@@ -48,7 +49,7 @@ class test_ann_lr(unittest.TestCase):
         )
 
     def test_case_1(self):
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             ["a"],
             case_1["block"],
             0.9,
@@ -83,7 +84,7 @@ class test_ann_lr(unittest.TestCase):
         """
         Running case 1 with big_t == 2
         """
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             ["a"],
             case_1["block"],
             0.9,
@@ -117,7 +118,7 @@ class test_ann_lr(unittest.TestCase):
         )
 
     def test_case_2(self):
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             ["a"],
             case_2["block"],
             0.9,
@@ -143,7 +144,7 @@ class test_ann_lr(unittest.TestCase):
         # actually gives no information, training isn't effective...
 
     def test_case_3(self):
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             ["a"],
             case_3["block"],
             0.9,
@@ -174,7 +175,7 @@ class test_ann_lr(unittest.TestCase):
         torch.allclose(c_ann.flatten(), given_m.flatten(), atol=0.03)
 
     def test_case_3_2(self):
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             ["a"],
             case_3["block"],
             0.9,
@@ -206,47 +207,6 @@ class test_ann_lr(unittest.TestCase):
 
         torch.allclose(c_ann.flatten(), given_m.flatten(), atol=0.04)
 
-    """
-    def test_block_1(self):
-        dlr_1 = solver.estimate_discounted_lifetime_reward(
-            self.block_1,
-            0.9,
-            lr_test_block_data_1_optimal_dr,
-            self.states_0,
-            1,
-            shocks_by_t={"theta": torch.FloatTensor(np.array([[0]]))},
-        )
-
-        self.assertEqual(dlr_1, 0)
-
-        # big_t is 2
-        dlr_1_2 = solver.estimate_discounted_lifetime_reward(
-            self.block_1,
-            0.9,
-            lr_test_block_data_1_optimal_dr,
-            self.states_0,
-            2,
-            shocks_by_t={"theta": torch.FloatTensor(np.array([[0], [0]]))},
-        )
-
-        self.assertEqual(dlr_1_2, 0)
-
-    def test_block_2(self):
-        dlr_2 = solver.estimate_discounted_lifetime_reward(
-            self.block_2,
-            0.9,
-            lr_test_block_data_2_optimal_dr,
-            self.states_0,
-            1,
-            shocks_by_t={
-                "theta": torch.FloatTensor(np.array([[0]])),
-                "psi": torch.FloatTensor(np.array([[0]])),
-            },
-        )
-
-        self.assertEqual(dlr_2, 0)
-    """
-
     def test_lifetime_reward_perfect_foresight(self):
         ### Model data
 
@@ -254,7 +214,7 @@ class test_ann_lr(unittest.TestCase):
         state_variables = ["a", "p"]
 
         ### Loss function
-        edlrl = ann.get_estimated_discounted_lifetime_reward_loss(
+        edlrl = maliar.get_estimated_discounted_lifetime_reward_loss(
             state_variables, pfblock, 0.9, 1, parameters=pfm.calibration
         )
 
