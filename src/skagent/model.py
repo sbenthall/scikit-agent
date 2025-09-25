@@ -291,6 +291,13 @@ class Block:
 
         return maybe_lag_variables
 
+    def get_reward(self, agent=None):
+        return {
+            rsym: self.reward[rsym]
+            for rsym in self.reward
+            if agent is None or agent == self.reward[agent]
+        }
+
 
 @dataclass
 class DBlock(Block):

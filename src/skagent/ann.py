@@ -274,11 +274,12 @@ class BlockPolicyNet(Net):
         self.apply_open_bounds = apply_open_bounds
 
         ## pseudo -- assume only one for now
+        controls = self.bellman_period.get_controls()
         if control_sym is None:
-            control_sym = next(iter(self.bellman_period.get_controls()))
+            control_sym = next(iter(controls))
 
         self.control_sym = control_sym
-        self.cobj = self.bellman_period.block.dynamics[control_sym]
+        self.cobj = controls[control_sym]
         self.iset = self.cobj.iset
 
         ## assess whether/how the control is bounded
@@ -348,7 +349,8 @@ class BlockPolicyNet(Net):
             control_sym: lambda: 1 for control_sym in self.bellman_period.get_controls()
         }
 
-        post = self.bellman_period.block.transition(vals, drs, until=self.control_sym)
+        # this breaks the BP object abstraction and should be rethought.
+        post = self.bellman_period.dblock.transition(vals, drs, until=self.control_sym)
 
         # the inputs to the network are the information set of the control variable
         # The use of torch.stack and .T here are wild guesses, probably doesn't generalize
@@ -480,12 +482,13 @@ class BlockValueNet(Net):
         # Value function should use the same information set as the policy function
         # Both V(s) and π(s) take the same state information as input
         ## pseudo -- assume only one control for now (same as BlockPolicyNet)
+        controls = self.bellman_period.get_controls()
         if control_sym is None:
-            control_sym = next(iter(self.bellman_period.get_controls()))
+            control_sym = next(iter(controls))
 
         self.control_sym = control_sym
-        # should move this to BP
-        self.cobj = self.bellman_period.block.dynamics[control_sym]
+        self.cobj = controls[control_sym]
+        self.iset = self.cobj.iset
 
         # Use the same information set as the policy network
         self.state_variables = sorted(list(self.cobj.iset))

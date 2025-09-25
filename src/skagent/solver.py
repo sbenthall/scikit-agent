@@ -83,16 +83,7 @@ def static_reward(
             states, shocks, parameters, decision_rules=dr
         )
 
-    # this assumes only one reward is given.
-    # can be generalized in the future.
-    # -- logic should be moved into the BP object
-    rsym = list(
-        {
-            sym
-            for sym in bellman_period.block.reward
-            if agent is None or bellman_period.block.reward[sym] == agent
-        }
-    )[0]
+    rsym = list(bellman_period.get_reward())[0]
 
     reward = bellman_period.reward_function(
         states, shocks, controls, parameters, agent=agent, decision_rules=dr

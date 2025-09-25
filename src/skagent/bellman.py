@@ -8,35 +8,61 @@ and framing them in terms of arrival states, shocks, and decisions.
 
 """
 
+from skagent.model import Block
 import numpy as np
 import torch
 from torch.autograd import grad
 
 
-class BellmanPeriod:
+class BellmanPeriod(Block):
     """
     A class representing a period of a Bellman or Dynamic Stochastic Optimization Problem.
 
-    TODO: Currently this is based on a Block, but I think BlockBellmanPeriod should be
-    a subclass of an abstract class.
+    Parameters
+    ----------
+    dblock : DBlock
+    calibration: dict
+    decision_rules : dict, optional
     """
 
-    def __init__(self, block, calibration, decision_rules=None):
-        self.block = block
+    def __init__(self, dblock, calibration, agent=None, decision_rules=None):
+        self.dblock = dblock
+
+        # this is not great design.
+        # if the BellmanPeriod is a block,
+        # it would be better if it properly used its superclass.
+        # self.block = self.dblock
+
         self.calibration = calibration
         self.decision_rules = decision_rules
-        self.arrival_states = self.block.get_arrival_states(calibration)
+        self.arrival_states = self.dblock.get_arrival_states(calibration)
+        self.agent = agent
+
+    def get_attributions(self):
+        """
+        This overwrites the superclass method but it should
+        use the BellmanPeriod's 'agent' designation only.
+        """
+        attrs = self.dblock.get_attributions()
+
+        if self.agent is None:
+            return attrs
+        else:
+            return {self.agent: attrs[self.agent]}
 
     def get_arrival_states(self, calibration):
-        return self.block.get_arrival_states(
+        return self.dblock.get_arrival_states(
             calibration if calibration else self.calibration
         )
 
     def get_controls(self):
-        return self.block.get_controls()
+        return self.dblock.get_controls()
 
     def get_shocks(self):
-        return self.block.get_shocks()
+        return self.dblock.get_shocks()
+
+    def get_reward(self):
+        return self.dblock.get_reward(agent=self.agent)
 
     def transition_function(
         self, states_t, shocks_t, controls_t, parameters=None, decision_rules=None
@@ -51,7 +77,7 @@ class BellmanPeriod:
         )
 
         vals = parameters | states_t | shocks_t | controls_t
-        post = self.block.transition(vals, decision_rules, fix=list(controls_t.keys()))
+        post = self.dblock.transition(vals, decision_rules, fix=list(controls_t.keys()))
 
         return {sym: post[sym] for sym in self.arrival_states}
 
@@ -68,7 +94,7 @@ class BellmanPeriod:
         )
 
         vals = parameters | states_t | shocks_t
-        post = self.block.transition(vals, decision_rules)
+        post = self.dblock.transition(vals, decision_rules)
         return {sym: post[sym] for sym in decision_rules}
 
     def reward_function(
@@ -80,6 +106,9 @@ class BellmanPeriod:
         agent=None,
         decision_rules=None,
     ):
+        if agent is None:
+            agent = self.agent
+
         decision_rules = (
             decision_rules
             if decision_rules
@@ -90,14 +119,11 @@ class BellmanPeriod:
         )
 
         vals_t = parameters | states_t | shocks_t | controls_t
-        post = self.block.transition(
+        post = self.dblock.transition(
             vals_t, decision_rules, fix=list(controls_t.keys())
         )
-        return {
-            sym: post[sym]
-            for sym in self.block.reward
-            if agent is None or self.block.reward[sym] == agent
-        }
+
+        return {sym: post[sym] for sym in self.get_reward()}
 
     def grad_reward_function(
         self,
@@ -136,6 +162,9 @@ class BellmanPeriod:
             Nested dictionary of gradients for each reward symbol and variable:
             {reward_sym: {var_name: gradient}}
         """
+        if agent is None:
+            agent = self.agent
+
         decision_rules = (
             decision_rules
             if decision_rules
@@ -149,15 +178,15 @@ class BellmanPeriod:
         vals_t = parameters | states_t | shocks_t | controls_t
 
         # Compute rewards using block transition
-        post = self.block.transition(
+        post = self.dblock.transition(
             vals_t, decision_rules, fix=list(controls_t.keys())
         )
 
         # move this logic to BP
         rewards = {
             sym: post[sym]
-            for sym in self.block.reward
-            if agent is None or self.block.reward[sym] == agent
+            for sym in self.dblock.reward
+            if agent is None or self.dblock.reward[sym] == agent
         }
 
         # Compute gradients for each reward with respect to each variable in wrt
@@ -237,15 +266,7 @@ def estimate_discounted_lifetime_reward(
     states_t = states_0
     total_discounted_reward = 0
 
-    # Get all reward symbols for the agent
-    # TODO: move logic to bellman period
-    reward_syms = list(
-        {
-            sym
-            for sym in bellman_period.block.reward
-            if agent is None or bellman_period.block.reward[sym] == agent
-        }
-    )
+    reward_syms = list(bellman_period.get_reward())
 
     if callable(discount_factor):
         raise Exception(
@@ -351,13 +372,7 @@ def estimate_bellman_residual(
     shocks_t = {sym: shocks[f"{sym}_0"] for sym in shock_syms}
     shocks_t_plus_1 = {sym: shocks[f"{sym}_1"] for sym in shock_syms}
 
-    # Get reward variables
-    # TODO: logic to BP
-    reward_vars = [
-        sym
-        for sym in bellman_period.block.reward
-        if agent is None or bellman_period.block.reward[sym] == agent
-    ]
+    reward_vars = list(bellman_period.get_reward())
     if len(reward_vars) == 0:
         raise Exception("No reward variables found in block")
     reward_sym = reward_vars[0]  # Assume single reward for now

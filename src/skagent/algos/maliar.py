@@ -32,7 +32,7 @@ def generate_givens_from_states(states: Grid, block: model.Block, shock_copies: 
     for i in range(shock_copies):
         # relies on constructed shocks
         # required
-        shock_values = draw_shocks(block.shocks, n=n)
+        shock_values = draw_shocks(block.get_shocks(), n=n)
         new_shock_values.update(
             {f"{sym}_{i}": shock_values[sym] for sym in shock_values}
         )
@@ -60,8 +60,7 @@ def simulate_forward(
     for t in range(big_t):
         # TODO: make sure block shocks are 'constructed'
         # TODO: allow option for 'structured' draws, e.g. from exact discretization.
-        # this breaks the BP abstraction somewhat; BP should have a wrapper method
-        shocks_t = draw_shocks(bellman_period.block.shocks, n=n)
+        shocks_t = draw_shocks(bellman_period.get_shocks(), n=n)
 
         # this is cumbersome; probably can be solved deeper on the data structure level
         # note similarity to Grid.from_dict() reconciliation logic.
@@ -140,9 +139,7 @@ def maliar_training_loop(
         # i). simulate the model to produce data {ωi }ni=1 by using the decision rule ϕ (·, θ );
         # TODO: this breaks the bellman period abstraction slightly. consider refactoring generate-givens
         # to use BP instead.
-        givens = generate_givens_from_states(
-            states_0_n, bellman_period.block, shock_copies
-        )
+        givens = generate_givens_from_states(states_0_n, bellman_period, shock_copies)
 
         # ii). construct the gradient ∇ Xi^n (θ ) = 1n ni=1 ∇ ξ (ωi ; θ );
         # iii). update the coeﬃcients θ_hat = θ − λk ∇ Xi^n (θ ) and go to step 2.i);

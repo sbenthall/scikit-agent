@@ -37,13 +37,7 @@ def static_reward(
     # this assumes only one reward is given.
     # can be generalized in the future.
     # move this logic to BellmanPeriod
-    rsym = list(
-        {
-            sym
-            for sym in bellman_period.block.reward
-            if agent is None or bellman_period.block.reward[sym] == agent
-        }
-    )[0]
+    rsym = list(bellman_period.get_reward())[0]
 
     reward = bellman_period.reward_function(
         states, shocks, controls, parameters, agent=agent, decision_rules=dr
@@ -252,14 +246,8 @@ class BellmanEquationLoss:
         self.shock_syms = list(shock_vars.keys())
 
         self.agent = agent
-        # Test reward variables
-        # TODO: move this to BP
-        reward_vars = [
-            sym
-            for sym in self.bellman_period.block.reward
-            if agent is None or self.bellman_period.block.reward[sym] == self.agent
-        ]
-        if len(reward_vars) == 0:
+
+        if len(bellman_period.get_reward()) == 0:
             raise Exception("No reward variables found in block")
 
     def __call__(self, df, input_grid: Grid):
