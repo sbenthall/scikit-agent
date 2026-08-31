@@ -24,9 +24,7 @@ class test_consumption_parsing(unittest.TestCase):
         self.config = load_consumer_config()
 
     def test_parse(self):
-        self.consumer_yaml_file
-
-        config = yaml.load(self.consumer_yaml_file, Loader=parser.skagent_loader())
+        config = self.config
 
         self.assertEqual(config["calibration"]["DiscFac"], 0.96)
         self.assertEqual(config["blocks"][0]["name"], "consumption normalized")
@@ -40,8 +38,11 @@ class test_consumption_parsing(unittest.TestCase):
 
         ## construct and test the portfolio block
         portfolio_block = model.DBlock(**config["blocks"][1])
-        portfolio_block.construct_shocks(config["calibration"])
-        portfolio_block.discretize({"risky_return": {"N": 5}})
+        # ``construct_shocks`` returns the resolved shocks rather than storing
+        # them, so the calibration goes to ``discretize`` directly.
+        portfolio_block.discretize(
+            {"risky_return": {"N": 5}}, calibration=config["calibration"]
+        )
 
     def test_control_tag(self):
         """`!Control` produces a Control, not a token."""
